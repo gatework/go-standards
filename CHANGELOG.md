@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 - 2026-11-11
+
+- `make fmt` judges only the diff on stdout, so `go run` download messages on
+  stderr no longer fail the check in CI.
+
 ## 1.0.0 - 2026-11-10
 
 - First release of the gatework Go engineering standard (STANDARD.md).
