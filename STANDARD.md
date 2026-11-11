@@ -1,6 +1,6 @@
 # gatework Go 工程规范
 
-版本：1.0.1（2026-11-11）。适用于 gatework 组织的全部 Go 模块。
+版本：1.0.2（2026-11-11）。适用于 gatework 组织的全部 Go 模块。
 
 本规范是长期迭代的唯一基准。各仓库的 `AGENTS.md` 只补充本仓库特有的领域边界与安全语义，不得与本规范冲突；冲突时以本规范为准，并通过修订本规范（而不是在仓库里另立规则）解决。
 
@@ -121,11 +121,11 @@ Go 没有类和继承；"面向对象"在这里指：**先用类型刻画领域�
 ## 5. 错误
 
 - **ERR-1** 错误是值：返回 `error`，不 panic。`panic` 只用于不可能发生的程序缺陷，以及 `MustX` 形式的包级初始化（如 `regexp.MustCompile`）。禁止用 `panic`/`recover` 实现控制流。
-- **ERR-2** 在每个跨越包边界或增加了信息的地方用 `%w` 包装一次上下文：`fmt.Errorf("decode plan %s: %w", path, err)`。不加没有信息量的包装（`"failed: %w"`）[lint: errorlint, wrapcheck 只对 adapter 包启用]。
+- **ERR-2** 在每个跨越包边界或增加了信息的地方用 `%w` 包装一次上下文：`fmt.Errorf("decode plan %s: %w", path, err)`。不加没有信息量的包装（`"failed: %w"`）[lint: errorlint；wrapcheck 只对 adapter 包启用，且不要求包装 gatework 模块已分类的错误]。
 - **ERR-3** 调用方需要分支判断的条件用哨兵错误（`errors.Is`）或错误类型（`errors.As`/`errors.AsType`），不比较错误字符串。
 - **ERR-4** 每个错误只处理一次：要么返回，要么记录日志并消化，不能既记录又返回。
 - **ERR-5** 错误与诊断中不包含凭据、设备原始输出或用户敏感数据；需要携带时使用专门的、默认脱敏的字段。
-- **ERR-6** 不返回 `nil, nil`；"不存在"用 `(T, bool)` 或哨兵错误表达 [lint: nilnil]。
+- **ERR-6** 生产 API 不返回 `nil, nil`；"不存在"用 `(T, bool)` 或哨兵错误表达 [lint: nilnil，测试中的假实现除外]。
 
 ## 6. 上下文、并发与资源
 
