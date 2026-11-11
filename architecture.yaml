@@ -1,0 +1,25 @@
+# go-standards import boundaries (STANDARD.md ARC-1).
+declared:
+  - .
+  - ./internal/archcheck
+  - ./internal/conform
+  - ./internal/cli
+  - ./cmd/archcheck
+  - ./cmd/stdsync
+
+rules:
+  - name: the root package only embeds the standard files
+    packages: [.]
+    deny: [./..., os, os/exec, net]
+
+  - name: archcheck is a pure rule engine
+    packages: [./internal/archcheck]
+    deny: [./..., os, os/exec, net]
+
+  - name: conform depends only on the root package
+    packages: [./internal/conform]
+    deny: [./internal/..., ./cmd/...]
+
+  - name: commands only wire the cli package
+    packages: [./cmd/...]
+    deny: [., ./internal/archcheck, ./internal/conform]
