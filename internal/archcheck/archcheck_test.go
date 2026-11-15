@@ -79,6 +79,9 @@ func TestDecodeConfigRejectsMalformedRules(t *testing.T) {
 		"rules: [{packages: [./a], deny: [os]}]",
 		"rules: [{name: x, packages: [parser], deny: [os]}]",
 		"rule: []",
+		"{}",
+		"declared: [.]\nrules: []",
+		rules + "\n---\nrules: []",
 	} {
 		if _, err := archcheck.DecodeConfig([]byte(doc)); err == nil {
 			t.Fatalf("accepted %q", doc)
@@ -93,5 +96,22 @@ func TestDecodePackages(t *testing.T) {
 	}
 	if _, err := archcheck.DecodePackages(strings.NewReader(`{"ImportPath":`)); err == nil {
 		t.Fatal("accepted truncated output")
+	}
+}
+
+func TestUnmatchedRuleIsReported(t *testing.T) {
+	t.Parallel()
+	c, err := archcheck.DecodeConfig([]byte(rules))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := archcheck.Check(c, module, []archcheck.Package{{ImportPath: module}})
+	if len(got) != 2 {
+		t.Fatalf("got %v, want two unmatched rules", got)
+	}
+	for _, v := range got {
+		if v.Package != "no packages matched" {
+			t.Fatal(v)
+		}
 	}
 }

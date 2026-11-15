@@ -37,7 +37,7 @@ type Rule struct {
 
 // Config is a rule table.
 type Config struct {
-	// Declared, when set, requires every local package to match a pattern,
+	// Declared requires every local package to match a pattern,
 	// so new packages cannot silently escape the rules.
 	Declared []string `yaml:"declared"`
 	Rules    []Rule   `yaml:"rules"`
@@ -69,6 +69,18 @@ func DecodeConfig(body []byte) (Config, error) {
 	d.KnownFields(true)
 	if err := d.Decode(&c); err != nil {
 		return Config{}, fmt.Errorf("archcheck: rules: %w", err)
+	}
+	var extra any
+	if err := d.Decode(&extra); !errors.Is(err, io.EOF) {
+		return Config{}, errors.New("archcheck: expected exactly one YAML document")
+	}
+	if len(c.Declared) == 0 || len(c.Rules) == 0 {
+		return Config{}, errors.New("archcheck: declared packages and rules are required")
+	}
+	for _, p := range c.Declared {
+		if !strings.HasPrefix(p, "./") && p != "." {
+			return Config{}, fmt.Errorf("archcheck: declared %q must be a local pattern", p)
+		}
 	}
 	for i, r := range c.Rules {
 		if r.Name == "" || len(r.Packages) == 0 || len(r.Deny) == 0 && len(r.OnlyLocal) == 0 {
@@ -104,6 +116,7 @@ func DecodePackages(r io.Reader) ([]Package, error) {
 func Check(c Config, module string, packages []Package) []Violation {
 	m := moduleNames(module)
 	var out []Violation
+	matched := make([]bool, len(c.Rules))
 	for _, p := range packages {
 		rel, ok := m.local(p.ImportPath)
 		if !ok {
@@ -112,10 +125,16 @@ func Check(c Config, module string, packages []Package) []Violation {
 		if len(c.Declared) > 0 && !matchAny(c.Declared, rel) {
 			out = append(out, Violation{Rule: "undeclared package", Package: rel})
 		}
-		for _, r := range c.Rules {
+		for i, r := range c.Rules {
 			if matchAny(r.Packages, rel) && !matchAny(r.Except, rel) {
+				matched[i] = true
 				out = append(out, r.check(m, rel, p)...)
 			}
+		}
+	}
+	for i, ok := range matched {
+		if !ok {
+			out = append(out, Violation{Rule: c.Rules[i].Name, Package: "no packages matched"})
 		}
 	}
 	slices.SortFunc(out, func(a, b Violation) int { return strings.Compare(a.String(), b.String()) })
