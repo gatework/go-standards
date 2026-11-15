@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 - 2026-11-15
+
+- Clarify architecture applicability, ownership, error contracts and test layers.
+- Add data, algorithm, domain and runtime contract rules.
+- Reject ineffective architecture configurations and unmatched rule selectors.
+- Enforce explicit enum cases and restore package naming checks.
+
 ## 1.0.2 - 2026-11-11
 
 - wrapcheck no longer asks adapters to wrap errors from gatework modules,

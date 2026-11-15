@@ -19,3 +19,22 @@ make check STANDARDS_DIR=../go-standards                 # until go-standards is
 ```
 
 Then make the first line of `AGENTS.md` link `go-standards/STANDARD.md`, and add an `architecture.yaml`.
+
+## Architecture configuration
+
+`architecture.yaml` must contain nonempty `declared` and `rules` lists.
+Every rule must select at least one production package after `except` is
+applied. Only one YAML document is accepted. Checks use the current platform
+and build tags; validate other supported targets in CI as well.
+
+```yaml
+declared: [., ./internal/cli, ./cmd/...]
+rules:
+  - name: core stays independent of commands
+    packages: [.]
+    deny: [./internal/..., ./cmd/...]
+```
+
+A declaration registers a package; it does not itself constrain imports.
+Review rule coverage when adding packages. Use `STANDARDS_DIR` to verify a
+local standard revision across adopting repositories before publishing it.
