@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 - 2026-11-16
+
+- Check SQL resource closure and row iteration errors with sqlclosecheck and rowserrcheck.
+- Check inherited context propagation with contextcheck.
+- Enable six explicit gocritic correctness checks under GEN-5.
+
 ## 1.1.0 - 2026-11-15
 
 - Clarify architecture applicability, ownership, error contracts and test layers.
