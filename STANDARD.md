@@ -1,6 +1,6 @@
 # gatework Go 工程规范
 
-版本：1.1.0（2026-11-15）。适用于 gatework 组织的全部 Go 模块。
+版本：1.2.0（2026-11-16）。适用于 gatework 组织的全部 Go 模块。
 
 本规范是长期迭代的唯一基准。各仓库的 `AGENTS.md` 只补充本仓库特有的领域边界与安全语义，不得与本规范冲突；冲突时以本规范为准，并通过修订本规范（而不是在仓库里另立规则）解决。
 
@@ -20,6 +20,7 @@
 - **GEN-2 行为等价先于删除。** 重写已有业务逻辑时，先用金样或差分测试证明新旧实现等价，再切换、再删除旧代码。有意的不等价必须在测试里逐条列出并写明理由。
 - **GEN-3 一次只做一件事。** 一个提交只包含一个可独立验证的变化；重构与行为变更分开提交。
 - **GEN-4 标准库优先。** 新增第三方依赖需在 PR 中说明标准库为何不够。开发工具（golangci-lint、govulncheck、stdsync、archcheck）在共享的 `standard.mk` 中以 `go run module@version` 固定版本，不写入库模块的 `go.mod`，以免工具依赖进入库的依赖图。
+- **GEN-5 [lint]** 禁止可静态识别的可疑 append 结果赋值、参数顺序、函数调用、条件表达式、重复实参及使 defer 失效的退出 [lint: gocritic 的 appendAssign、argOrder、badCall、badCond、dupArg、exitAfterDefer]。共享配置只启用这些明确列出的检查；增加检查时须先修订本规范。
 
 ## 1. 模块与工具链
 
@@ -131,12 +132,12 @@ Go 没有类和继承；"面向对象"在这里指：**先用类型刻画领域�
 
 ## 6. 上下文、并发与资源
 
-- **CON-1** 会阻塞、做 I/O 或可能耗时的函数第一个参数是 `ctx context.Context`；不把 `Context` 存进结构体（生命周期对象的内部取消除外，需注释说明）[lint: containedctx, noctx]。
+- **CON-1** 会阻塞、做 I/O 或可能耗时的函数第一个参数是 `ctx context.Context`；不把 `Context` 存进结构体（生命周期对象的内部取消除外，需注释说明）[lint: containedctx, noctx]。下游调用继承传入的 context，不以 `context.Background()` 或 `context.TODO()` 意外切断取消、截止时间和请求值 [lint: contextcheck]；独立生命周期的操作须明确所有者、退出条件和脱离调用方取消的理由。
 - **CON-2** 每个 goroutine 都有明确的所有者和退出条件；启动它的函数负责等待它（`sync.WaitGroup.Go`、`errgroup`）。不留"发射后不管"的 goroutine。
 - **CON-3** 通道由发送方关闭；参数和字段使用单向通道类型表达所有权。
 - **CON-4** 优先用通道传递所有权、用互斥锁保护状态；锁与它保护的字段写在一起并注释。不复制含锁的值 [lint: govet copylocks]。
 - **CON-5** 时间与随机性通过注入的 `func() time.Time`/时钟接口获得；并发时间测试推荐 testing/synctest，允许 bubble 内虚拟 Sleep；不用真实 Sleep 猜测调度完成。安全令牌使用 crypto/rand，不以可预测随机源替代。
-- **CON-6** 获得资源的函数紧接着 `defer` 释放；`Close` 的错误在写路径上必须检查。持久化写入使用原子写（临时文件 + fsync + rename），由共享的 store 包提供。
+- **CON-6** 获得资源的函数紧接着 `defer` 释放；`Close` 的错误在写路径上必须检查。持久化写入使用原子写（临时文件 + fsync + rename），由共享的 store 包提供。SQL Rows、Stmt 等资源遵循同一关闭责任 [lint: sqlclosecheck]；Rows 正常迭代结束后检查 `Err()`，不得把读取失败当作完整结果 [lint: rowserrcheck]。
 
 ## 7. 日志与可观测性
 
